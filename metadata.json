@@ -1,0 +1,5 @@
+{
+  "name": "BEO GEN Free",
+  "description": "Aplikasi web yang memanfaatkan model Gemini VEO untuk menghasilkan video menakjubkan dari prompt teks dan gambar opsional. Pengguna dapat mendeskripsikan sebuah adegan, mengunggah gambar pendukung, dan menyaksikan visi kreatif mereka menjadi hidup dalam format video.",
+  "requestFramePermissions": []
+}
