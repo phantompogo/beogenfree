@@ -11,6 +11,7 @@ export interface ModelCardFormData {
     duration: number;
     videoCount: number;
     modelId: string;
+    muteAudio: boolean;
 }
 
 interface ModelCardProps {
@@ -52,6 +53,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, isApiKeySaved, isLo
     const [aspectRatio, setAspectRatio] = useState<string>(model.options.aspectRatios[0]);
     const [duration, setDuration] = useState<number>(model.options.durations[0]);
     const [videoCount, setVideoCount] = useState<number>(model.options.videoCounts[0]);
+    const [muteAudio, setMuteAudio] = useState<boolean>(false);
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -62,6 +64,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, isApiKeySaved, isLo
             duration,
             videoCount,
             modelId: model.id,
+            muteAudio,
         });
     };
 
@@ -126,6 +129,22 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, isApiKeySaved, isLo
                                 </li>
                            </ul>
                         </div>
+                         {model.supportsMuteAudio && (
+                             <div className="option-selector">
+                                 <header>Audio</header>
+                                 <div className="toggle-switch">
+                                     <input
+                                         type="checkbox"
+                                         id={`mute-audio-${model.id}`}
+                                         checked={muteAudio}
+                                         onChange={(e) => setMuteAudio(e.target.checked)}
+                                         disabled={isLoading}
+                                     />
+                                     <label htmlFor={`mute-audio-${model.id}`}>Toggle Mute</label>
+                                     <span>Mute Audio</span>
+                                 </div>
+                             </div>
+                         )}
                     </div>
                     
                     <button
