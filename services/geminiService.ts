@@ -6,6 +6,7 @@ interface VideoConfig {
     mimeType?: string;
     aspectRatio?: string;
     numberOfVideos?: number;
+    muteAudio?: boolean;
     // Note: duration and resolution are not directly supported by the VEO API config yet.
     // They are controlled via UI but not passed here.
 }
@@ -13,7 +14,7 @@ interface VideoConfig {
 export async function generateVideo(prompt: string, model: string, config: VideoConfig, apiKey: string): Promise<Blob> {
     const ai = new GoogleGenAI({ apiKey });
     
-    const { imageBytes, mimeType, aspectRatio, numberOfVideos } = config;
+    const { imageBytes, mimeType, aspectRatio, numberOfVideos, muteAudio } = config;
     
     const generateVideosParams: any = {
         model: model,
@@ -27,6 +28,10 @@ export async function generateVideo(prompt: string, model: string, config: Video
     // including it makes the app forward-compatible.
     if (aspectRatio) {
         generateVideosParams.config.aspectRatio = aspectRatio;
+    }
+    
+    if (muteAudio) {
+        generateVideosParams.config.muteAudio = true;
     }
 
     if (imageBytes && mimeType) {
