@@ -34,6 +34,7 @@ export interface BatchVideoFormData {
     modelId: string;
     aspectRatio: string;
     duration: number;
+    muteAudio: boolean;
 }
 
 interface BatchVideoCardProps {
@@ -51,6 +52,7 @@ export const BatchVideoCard: React.FC<BatchVideoCardProps> = ({ isApiKeySaved, i
 
     const [aspectRatio, setAspectRatio] = useState<string>(selectedModel.options.aspectRatios[0]);
     const [duration, setDuration] = useState<number>(selectedModel.options.durations[0]);
+    const [muteAudio, setMuteAudio] = useState<boolean>(false);
 
     useEffect(() => {
         setAspectRatio(selectedModel.options.aspectRatios[0]);
@@ -74,6 +76,7 @@ export const BatchVideoCard: React.FC<BatchVideoCardProps> = ({ isApiKeySaved, i
             modelId: selectedModelId,
             aspectRatio,
             duration,
+            muteAudio,
         });
     };
     
@@ -151,6 +154,22 @@ export const BatchVideoCard: React.FC<BatchVideoCardProps> = ({ isApiKeySaved, i
                             modelId={selectedModel.id}
                             disabled={!isApiKeySaved || isLoading || selectedModel.options.durations.length <= 1}
                         />
+                        {selectedModel.supportsMuteAudio && (
+                             <div className="option-selector">
+                                 <header>Audio</header>
+                                 <div className="toggle-switch">
+                                     <input
+                                         type="checkbox"
+                                         id={`mute-audio-batch`}
+                                         checked={muteAudio}
+                                         onChange={(e) => setMuteAudio(e.target.checked)}
+                                         disabled={isLoading}
+                                     />
+                                     <label htmlFor={`mute-audio-batch`}>Toggle Mute</label>
+                                     <span>Mute Audio</span>
+                                 </div>
+                             </div>
+                         )}
                     </div>
                     
                     <button
