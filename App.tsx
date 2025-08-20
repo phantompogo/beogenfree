@@ -8,6 +8,8 @@ import { StatusCard } from './components/StatusCard';
 import { NeonCard } from './components/NeonCard';
 import { GooeySlider } from './components/GooeySlider';
 import { SkateboardLoader } from './components/SkateboardLoader';
+import { BatchVideoCard } from './components/BatchVideoCard';
+import { PinModal } from './components/PinModal';
 import './styles/App.css';
 
 // Icons for status cards
@@ -100,7 +102,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose }) => {
     );
 };
 
-type AppStep = 'settings' | 'model_selection' | 'model_view';
+type AppStep = 'settings' | 'model_selection' | 'model_view' | 'batch_view';
 
 const App: React.FC = () => {
   const {
@@ -110,6 +112,7 @@ const App: React.FC = () => {
     apiKey, setApiKey,
     isKeySaved, handleSaveKey, handleClearKey,
     clearError,
+    isBatchProcessing, batchStatus, handleBatchSubmit,
   } = useVideoGenerator();
 
   const [hue1, setHue1] = useState(255);
@@ -117,12 +120,23 @@ const App: React.FC = () => {
   const [appStep, setAppStep] = useState<AppStep>('settings');
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     const rand1 = 120 + Math.floor(Math.random() * 240);
     const rand2 = rand1 - 80 + (Math.floor(Math.random() * 60) - 30);
     setHue1(rand1);
     setHue2(rand2);
+    
+    // Check for saved PIN verification
+    const savedPinStatus = localStorage.getItem('isPinVerified');
+    if (savedPinStatus === 'true') {
+        setIsPinVerified(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -144,6 +158,28 @@ const App: React.FC = () => {
   const handleModelSelect = (modelId: string) => {
       setSelectedModelId(modelId);
       setAppStep('model_view');
+  };
+  
+  const handleBatchButtonClick = () => {
+      if (isPinVerified) {
+          setAppStep('batch_view');
+      } else {
+          setIsPinModalOpen(true);
+      }
+  };
+  
+  const handlePinSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (pinInput === '123123') {
+          localStorage.setItem('isPinVerified', 'true');
+          setIsPinVerified(true);
+          setIsPinModalOpen(false);
+          setPinError('');
+          setPinInput('');
+          setAppStep('batch_view');
+      } else {
+          setPinError('PIN yang Anda masukan salah.');
+      }
   };
 
   return (
@@ -230,6 +266,9 @@ const App: React.FC = () => {
                             {model.name}
                         </button>
                     ))}
+                    <button onClick={handleBatchButtonClick} className="btn btn--secondary">
+                      Batch Video
+                    </button>
                 </div>
              </NeonCard>
           )}
@@ -254,50 +293,78 @@ const App: React.FC = () => {
                     onSubmit={handleSubmit}
                   />
                 ))}
+            </div>
+          )}
 
-              <div className="status-section">
-                {isLoading && (
-                  <div className="loading-container">
-                    <SkateboardLoader />
-                    <div className="loading-message">
-                      <h3>Just a minute...</h3>
-                      <p>Your video is generating.</p>
-                      <p className="animate-pulse">{loadingMessage}</p>
-                    </div>
-                  </div>
-                )}
+          {appStep === 'batch_view' && (
+            <div className='model-view-container'>
+                <button 
+                  onClick={() => setAppStep('model_selection')} 
+                  className="card-close-btn"
+                  aria-label="Kembali ke Pemilihan Model"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <BatchVideoCard
+                    isApiKeySaved={isKeySaved}
+                    isLoading={isBatchProcessing}
+                    onSubmit={handleBatchSubmit}
+                />
+            </div>
+          )}
 
-                {error && (
-                    <StatusCard
-                        variant="red"
-                        icon={<ErrorIcon/>}
-                        title="We are so sorry!"
-                        message={error}
-                    >
-                        <button onClick={clearError} className="btn">Cancel</button>
-                    </StatusCard>
-                )}
-
-                {generatedVideoUrl && !isLoading && (
-                    <StatusCard
-                        variant="green"
-                        icon={<SuccessIcon/>}
-                        title="Your video was generated!"
-                        message="You can preview your video below or download it."
-                    >
-                        <a href={generatedVideoUrl} download="generated-video.mp4" className="btn btn--primary">Download</a>
-                    </StatusCard>
-                )}
-              </div>
-
-              {generatedVideoUrl && !isLoading && (
-                <div className="video-section">
-                  <h2>Video Anda yang Dihasilkan</h2>
-                  <div className="video-container">
-                    <video src={generatedVideoUrl} controls autoPlay loop />
-                  </div>
+          <div className="status-section">
+            {isLoading && !isBatchProcessing && (
+              <div className="loading-container">
+                <SkateboardLoader />
+                <div className="loading-message">
+                  <h3>Just a minute...</h3>
+                  <p>Your video is generating.</p>
+                  <p className="animate-pulse">{loadingMessage}</p>
                 </div>
-              )}
+              </div>
+            )}
+
+            {isBatchProcessing && (
+              <StatusCard
+                  variant="blue"
+                  icon={<UploadingIcon />}
+                  title="Batch Processing in Progress..."
+                  message={batchStatus}
+              />
+            )}
+
+            {error && !isBatchProcessing && (
+                <StatusCard
+                    variant="red"
+                    icon={<ErrorIcon/>}
+                    title="We are so sorry!"
+                    message={error}
+                >
+                    <button onClick={clearError} className="btn">Cancel</button>
+                </StatusCard>
+            )}
+
+            {generatedVideoUrl && !isLoading && !isBatchProcessing && (
+                <StatusCard
+                    variant="green"
+                    icon={<SuccessIcon/>}
+                    title="Your video was generated!"
+                    message="You can preview your video below or download it."
+                >
+                    <a href={generatedVideoUrl} download="generated-video.mp4" className="btn btn--primary">Download</a>
+                </StatusCard>
+            )}
+          </div>
+
+          {generatedVideoUrl && !isLoading && !isBatchProcessing && (
+            <div className="video-section">
+              <h2>Video Anda yang Dihasilkan</h2>
+              <div className="video-container">
+                <video src={generatedVideoUrl} controls autoPlay loop />
+              </div>
             </div>
           )}
 
@@ -305,6 +372,18 @@ const App: React.FC = () => {
         <PremiumModal 
             isOpen={isPremiumModalOpen} 
             onClose={() => setIsPremiumModalOpen(false)} 
+        />
+        <PinModal
+            isOpen={isPinModalOpen}
+            onClose={() => {
+                setIsPinModalOpen(false);
+                setPinError('');
+                setPinInput('');
+            }}
+            onSubmit={handlePinSubmit}
+            pin={pinInput}
+            setPin={setPinInput}
+            error={pinError}
         />
     </div>
   );
