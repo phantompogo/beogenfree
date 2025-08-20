@@ -147,7 +147,8 @@ export const useVideoGenerator = () => {
                   imageBytes: imageBase64,
                   mimeType,
                   aspectRatio: formData.aspectRatio,
-                  numberOfVideos: 1, 
+                  numberOfVideos: 1,
+                  muteAudio: formData.muteAudio,
               }, savedApiKey);
               
               setBatchStatus(`[${i + 1}/${totalVideos}] Video dibuat! Mengunduh...`);
@@ -204,6 +205,7 @@ export const useVideoGenerator = () => {
           mimeType,
           aspectRatio: formData.aspectRatio,
           numberOfVideos: formData.videoCount,
+          muteAudio: formData.muteAudio,
       }, savedApiKey);
       const videoUrl = URL.createObjectURL(videoBlob);
       setGeneratedVideoUrl(videoUrl);
