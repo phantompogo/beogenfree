@@ -1,9 +1,11 @@
 
+
 import { useState, useEffect, useCallback } from 'react';
 import { generateVideo } from '../services/geminiService';
 import { fileToBase64 } from '../utils/fileUtils';
 import { LOADING_MESSAGES, VEO_MODELS } from '../constants';
 import type { ModelCardFormData } from '../components/ModelCard';
+import type { BatchVideoFormData } from '../components/BatchVideoCard';
 
 const getFriendlyErrorMessage = (message: string): string => {
     if (message.includes('400 Bad Request') || message.includes('INVALID_ARGUMENT')) {
@@ -37,6 +39,23 @@ const getFriendlyErrorMessage = (message: string): string => {
     return `Terjadi kesalahan: ${message}`;
 };
 
+// Helper to trigger download
+const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+// Helper to sanitize filenames
+const sanitizeFilename = (name: string): string => {
+    return name.substring(0, 50).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
 
 export const useVideoGenerator = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -46,6 +65,9 @@ export const useVideoGenerator = () => {
 
   const [apiKey, setApiKey] = useState<string>('');
   const [isKeySaved, setIsKeySaved] = useState<boolean>(false);
+  
+  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
+  const [batchStatus, setBatchStatus] = useState<string>('');
 
   // Effect to load API key from localStorage on initial render
   useEffect(() => {
@@ -87,6 +109,71 @@ export const useVideoGenerator = () => {
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+  
+  const handleBatchSubmit = useCallback(async (formData: BatchVideoFormData) => {
+      const savedApiKey = localStorage.getItem('gemini-api-key');
+      if (!savedApiKey) {
+          setError("Harap simpan Kunci API Anda sebelum membuat video.");
+          return;
+      }
+
+      const prompts = formData.prompts.split('\n').filter(p => p.trim() !== '').slice(0, 10);
+      if (prompts.length === 0 || isBatchProcessing) return;
+
+      setIsBatchProcessing(true);
+      setError(null);
+      setGeneratedVideoUrl(null); 
+      
+      const totalVideos = prompts.length;
+
+      for (let i = 0; i < totalVideos; i++) {
+          const currentPrompt = prompts[i];
+          const imageFile = formData.imageFiles?.[i]; 
+          
+          setBatchStatus(`[${i + 1}/${totalVideos}] Memproses prompt: "${currentPrompt.substring(0, 30)}..."`);
+          
+          try {
+              let imageBase64: string | undefined = undefined;
+              let mimeType: string | undefined = undefined;
+              
+              if (imageFile) {
+                  setBatchStatus(`[${i + 1}/${totalVideos}] Mengonversi gambar: ${imageFile.name}...`);
+                  imageBase64 = await fileToBase64(imageFile);
+                  mimeType = imageFile.type;
+              }
+
+              setBatchStatus(`[${i + 1}/${totalVideos}] Menghasilkan video... Ini mungkin memakan waktu beberapa menit.`);
+              const videoBlob = await generateVideo(currentPrompt, formData.modelId, {
+                  imageBytes: imageBase64,
+                  mimeType,
+                  aspectRatio: formData.aspectRatio,
+                  numberOfVideos: 1, 
+              }, savedApiKey);
+              
+              setBatchStatus(`[${i + 1}/${totalVideos}] Video dibuat! Mengunduh...`);
+              const filename = `${i + 1}_${sanitizeFilename(currentPrompt)}.mp4`;
+              triggerDownload(videoBlob, filename);
+
+          } catch (err) {
+              console.error(`Error on video ${i+1}:`, err);
+              const errorMessage = err instanceof Error ? getFriendlyErrorMessage(err.message) : 'Unknown error';
+              setBatchStatus(`[${i + 1}/${totalVideos}] Error: ${errorMessage}. Melewati.`);
+              setError(`Error pada video ${i + 1} ("${currentPrompt.substring(0, 20)}..."): ${errorMessage}`);
+          }
+
+          if (i < totalVideos - 1) {
+              setBatchStatus(`[${i + 1}/${totalVideos}] Unduhan selesai. Menunggu 10 detik sebelum video berikutnya...`);
+              await new Promise(resolve => setTimeout(resolve, 10000));
+          }
+      }
+
+      setBatchStatus('Pemrosesan batch selesai!');
+      setTimeout(() => {
+          setIsBatchProcessing(false);
+          setBatchStatus('');
+      }, 5000);
+
+  }, [isBatchProcessing]);
 
   const handleSubmit = useCallback(async (formData: ModelCardFormData) => {
     const savedApiKey = localStorage.getItem('gemini-api-key');
@@ -141,5 +228,6 @@ export const useVideoGenerator = () => {
     handleSaveKey,
     handleClearKey,
     clearError,
+    isBatchProcessing, batchStatus, handleBatchSubmit,
   };
 };
