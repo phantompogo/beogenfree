@@ -34,7 +34,7 @@ export const VEO_MODELS: VeoModel[] = [
     { 
       id: 'veo-3.0-generate-preview', 
       name: 'VEO 3 (Preview)',
-      supportsImage: false,
+      supportsImage: true,
       options: {
         aspectRatios: ['16:9'],
         durations: [8],
@@ -44,7 +44,7 @@ export const VEO_MODELS: VeoModel[] = [
     { 
       id: 'veo-3.0-fast-generate-preview', 
       name: 'VEO 3 (Fast Preview)',
-      supportsImage: false,
+      supportsImage: true,
       options: {
         aspectRatios: ['16:9'],
         durations: [8],
